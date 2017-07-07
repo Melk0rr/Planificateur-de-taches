@@ -9,11 +9,18 @@ Puis un champ contenant la commande à exécuter.
 
 Exemple: __0 0 0 1,15 * * date__, affichera la date dans le terminal chaque premier et 15 du mois à minuit.
 
+Un champ temporel peut également contenir: 
+- une __liste__ de valeurs: (1,3,5) dans le champ mois par exemple
+- un __intervalle__: (1-5) dans le champ jour par exemple
+- Le caractère __*__ pour signifier toutes les valeurs possibles
+- une __division__: \*/5 dans le champ minute, toutes les 5 minutes
+- un ou plusieurs ~nombre afin d'exprimer une __exception__: 5-8~6~7 ce qui correspond à 5,8
+
 ## Objectifs
 - élaboration d'un script d'installation
 - élaboration d'un script de désinstallation
 - création d'une commande tacherontab permettant de planifier les tâches et dont la syntaxe est: **tacherontab -u username {-e,-l,-r}** 
-  1. -e permettant l'édition ou la création du fichier de l'utilisateur donné
-  2. -l permettant l'affichage du fichier de l'utilisateur donné
-  3. -r permettant la suppression du fichier de l'utilisateur donné
+  1. __-e__ permettant l'édition ou la création du fichier de l'utilisateur donné
+  2. __-l__ permettant l'affichage du fichier de l'utilisateur donné
+  3. __-r__ permettant la suppression du fichier de l'utilisateur donné
 - création d'une commande tacheron chargée d'exécuter les tâches planifiées à l'heure donnée.
