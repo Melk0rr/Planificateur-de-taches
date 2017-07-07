@@ -6,6 +6,7 @@ Projet réalisé en **Bash** ayant pour but de créer une nouvelle commande linu
 secondes(0-3, par tranches de 15 secondes) minutes(0-59) heure(0-23) jour du mois(1-31) mois(1-12) jour de la semaine(0-6).
 
 Puis un champ contenant la commande à exécuter.
+
 Exemple: __0 0 0 1,15 * * date__, affichera la date dans le terminal chaque premier et 15 du mois à minuit.
 
 ## Objectifs
