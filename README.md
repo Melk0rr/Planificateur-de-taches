@@ -14,7 +14,7 @@ Un champ temporel peut également contenir:
 - un __intervalle__: (1-5) dans le champ jour par exemple
 - Le caractère __*__ pour signifier toutes les valeurs possibles
 - une __division__: \*/5 dans le champ minute, toutes les 5 minutes
-- un ou plusieurs ~nombre afin d'exprimer une __exception__: 5-8~6~7 ce qui correspond à 5,8
+- un ou plusieurs \~nombre afin d'exprimer une __exception__: 5-8~6~7 ce qui correspond à 5,8
 
 ## Objectifs
 - élaboration d'un script d'installation
