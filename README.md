@@ -1,6 +1,6 @@
 # Planificateur de taches
 
-##Description
+## Description
 Projet réalisé en **Bash** ayant pour but de créer une nouvelle commande linux permettant d'exécuter des tâches à un moment donné en lisant régulièrement un fichier ou plusieurs fichiers contenant six champs temporels sous la forme suivante:
 
 secondes(0-3, par tranches de 15 secondes) minutes(0-59) heure(0-23) jour du mois(1-31) mois(1-12) jour de la semaine(0-6).
@@ -8,7 +8,7 @@ secondes(0-3, par tranches de 15 secondes) minutes(0-59) heure(0-23) jour du moi
 Puis un champ contenant la commande à exécuter.
 Exemple: 0 0 0 1,15 * * date, affichera la date dans le terminal chaque premier et 15 du mois à minuit.
 
-##Objectifs
+## Objectifs
 - élaboration d'un script d'installation
 - élaboration d'un script de désinstallation
 - création d'une commande tacherontab permettant de planifier les tâches et dont la syntaxe est: **tacherontab -u username {-e,-l,-r}** 
