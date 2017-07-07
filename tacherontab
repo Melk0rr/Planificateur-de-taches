@@ -1,0 +1,79 @@
+#!/bin/bash
+
+if [ "$#" -le 3 ] && [ "$#" -ge 2 ]; then 
+    first_param="$1";
+    user="$2";
+    current_user=$(whoami);
+    path=$(cat /etc/tacheron.path);
+
+    if [[ "$first_param" != "-u" && "$first_param" != "+u" ]]; then 
+        echo "Erreur: Paramètre $first_param non valide!";
+    else
+        if ! grep -c "$user" /etc/passwd ; then 
+            echo "Erreur: L'utilisateur $user n'existe pas!";
+        else
+            if grep -q "$current_user" /etc/tacheron.deny; then
+                echo "Erreur: L'utilisateur $user n'a pas la permission d'utiliser la commande tacherontab!";
+            else
+                tacheron_members=$(grep tacheron /etc/group);
+                user_file="tacherontab$user";
+                if [ "$#" -eq 2 ]; then     
+                    if [ $first_param = '+u' ]; then
+                        echo "Ajout de l'utilisateur $user à la liste des utilisateurs autorisés...";
+                        if ! grep -q "$user" /etc/tacheron.allow; then
+                            echo -e "\n$user" >> /etc/tacheron.allow    
+                        fi;
+                        usermod -a -G tacheron "$user"  
+                        setfacl -m u:"$user":rwx /etc/tacheron      
+                        setfacl -R -m u:"$user":rwx "$path"
+                        setfacl -m u:"$user":rwx /var/log/tacheron.log
+                        if ! grep -q "$path" /home/"$user"/.bashrc ; then   
+                            echo "Référencement de la commande pour l'utilisateur $user.";
+                            echo -e "\nPATH=\$PATH:$path" >> /home/"$user"/.bashrc
+                        fi;
+                    else
+                        echo "Retrait de l'utilisateur $user de la liste des utilisateurs autorisés...";
+                        sed -i "s/$user//" /etc/tacheron.allow     
+                        deluser "$user" tacheron    
+                        setfacl -R -m u:"$user":--- "$path"    
+                        setfacl -m u:"$user":--- /etc/tacheron      
+                        setfacl -m u:"$user":--- /var/log/tacheron.log      
+                    fi;
+                else
+                    case "$3" in
+                    "-l")
+                        echo "Affichage du fichier tacherontab de l'utilisateur $user";
+                        [ -f /etc/tacheron/"$user_file" ] && cat /etc/tacheron/"$user_file"; echo -e "\n" || echo "Fichier $user_file introuvable!";    
+                        ;;
+                    "-r")
+                        echo "Suppression du fichier tacherontab de l'utilisateur $user";
+                        [ -f /etc/tacheron/"$user_file" ] && rm /etc/tacheron/"$user_file" || echo "Fichier $user_file introuvable!"; 
+                        ;;
+                    "-e")
+                        echo "Création du fichier tacherontab de l'utilisateur $user";
+                        if [ ! -f /etc/tacheron/"$user_file" ]; then 
+                            vi /tmp/"$user_file"
+                            if [ -f /tmp/"$user_file" ]; then 
+                                mv /tmp/"$user_file" /etc/tacheron/
+                                echo "Fichier sauvegardé dans le répertoire /etc/tacheron."
+                            else
+                                echo "Le fichier n'a pas été sauvegardé.";
+                            fi;
+                        else    
+                            echo "Edition du fichier tacherontab de l'utilisateur $user";
+                            vi /etc/tacheron/"$user_file";
+                            echo "Fichier édité.";
+                        fi;
+                        ;;
+                    *)
+                        echo "Erreur: $3, argument invalide!";
+                        ;;
+                    esac
+                fi;
+            fi;
+        fi;
+    fi;
+else 
+    echo "Erreur: Nombre d'argument invalide!"
+fi;
+

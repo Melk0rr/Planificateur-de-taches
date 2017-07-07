@@ -1,0 +1,183 @@
+#!/bin/bash
+
+GLOBIGNORE="*" # On évite les problèmes liés à l'interprétation du caractère *
+current_user=$(whoami);
+
+if [ "$current_user" == "root" ]; then
+    red_file="/etc/tacherontab";
+else
+    if [ -f "/etc/tacheron/tacherontab$current_user" ]; then
+        red_file="/etc/tacheron/tacherontab$current_user";
+    else
+        red_file="/etc/tacherontab";
+    fi;
+fi;
+
+function convert_seconds {
+    current_sec=$(date +'%S');
+    # 0-14: 0/ 15-29: 1/ 30-44: 2/ 45-59: 3
+    if [ "$current_sec" -le 14 ]; then
+        converted_sec=0
+    elif [ "$current_sec" -le 29 ]; then
+        converted_sec=1
+    elif [ "$current_sec" -le 44 ]; then
+        converted_sec=2
+    else
+        converted_sec=3
+    fi;
+    return "$converted_sec";
+}
+
+function check_syntax {
+    checked=1; 
+    declare -a array=("${!1}")
+    for i in {0..5}; do
+        element="${array[$i]}"; # Element actuellement parcouru
+
+        [ "$i" -eq 0 ] && max=3  # 4 tranches de 15 secondes
+        [ "$i" -eq 1 ] && max=59 # 59 minutes 
+        [ "$i" -eq 2 ] && max=23 # 23 heures
+        [ "$i" -eq 3 ] && max=31 # 31 jours dans un mois
+        [ "$i" -eq 4 ] && max=12 # 12 mois
+        [ "$i" -eq 5 ] && max=6  # 6 jours dans une semaine
+
+        if [ $(echo $element | grep "^\*$") ]; then # Contient *
+            checked=0;
+        elif [ $(echo $element | grep "^[0-9]\{1,2\}$") ] && [ "$element" -le "$max" ]; then # Contient un chiffre/nombre simple
+            checked=0;
+        elif [ $(echo $element | grep "^\*\/[0-9]\{1,2\}$") ]; then # Contient */n
+            checked=0;
+        elif [ $(echo $element | grep "^\([0-9]\{1,2\}[,|-]\)*[0-9]\{1,2\}$") ]; then # Contient une virgule ou un tiret
+            checked=0;
+        elif [ $(echo $element | grep "^\([0-9]\{1,2\}-[0-9]\{1,2\}\)\/[0-9]\{1,2\}$") ]; then # Contient x-y/n
+            checked=0;
+        elif [ $(echo $element | grep "^\([0-9]\{1,2\}-[0-9]\{1,2\}\)\{1\}\(~[0-9]\{1,2\}\)*$") ]; then # Contient des exceptions
+            checked=0;
+        else
+            return 1;    # La syntaxe ne correspond pas
+        fi;
+    done;
+    return "$checked";
+}
+
+function compare_date {
+    declare -a t_array=("${!1}"); # On récupère le premier tableau
+    declare -a c_array=("${!2}"); # On récupère le second tableau
+    equals=1;
+    for i in {0..5}; do # Pour chaque élément de la ligne, on compare avec l'élément correspondant de la date
+        t_element="${t_array[$i]}"; # élément actuel de la ligne
+        curr_element="${c_array[$i]}"; # élément de la date comparé à celui de la ligne
+        if [ "$t_element" == "*" ]; then
+            equals=0;
+        elif [ $(echo $t_element | grep "^$curr_element") ]; then # les deux éléments sont égaux
+            equals=0;
+        elif [ $(echo $t_element | grep "$curr_element" | grep "," | grep -v [-~/]) ]; then # contient une , mais pas les caractères -, ~ et / >> (liste)
+            IFS=',' read -a array <<< "$t_element"; # On split les éléments séparés par une , dans un tableau
+            for element in "${array[@]}"; do
+                if [[ "$element" -eq "$curr_element" ]]; then   # l'une des valeurs correspond
+                    equals=0;
+                else                         # inutile d'aller plus loin
+                    return 1;
+                fi;
+            done;
+        elif [ $(echo $t_element | grep "-" | grep -v [,~/]) ]; then # contient un - mais pas les caractères , ~ et / >> (intervalle)
+            min=$(echo $t_element | cut -d'-' -f1); # Première extrémité de l'intervalle
+            max=$(echo $t_element | cut -d'-' -f2); # Seconde extrémité de l'intervalle
+            if [[ "$min" -le "$curr_element" ]] && [[ "$max" -ge "$curr_element" ]]; then # l'élément de la date est compris entre les deux extrémités de l'intervalle
+                equals=0;
+            else
+                return 1;               # inutile d'aller plus loin
+            fi;
+        elif [ $(echo $t_element | grep "~") ]; then # contient une exception
+            IFS='~' read -a array <<< "$t_element"
+            for element in "${array[@]}"; do
+                if [[ "$element" -eq "$curr_element" ]]; then # Si l'exception correspond au champ de la date actuel, les dates ne correspondent pas
+                    return 1;
+                fi;
+            done;
+        elif [ $(echo $t_element | grep "/") ]; then   # contient une division
+            numer=$(echo $t_element | cut -d'/' -f1); # fréquence initiale
+            denom=$(echo $t_element | cut -d'/' -f2); # diviseur de fréquence
+            if [ "$i" -eq 0 ]; then
+                tmp_element=$(date +'%S');
+            else 
+                tmp_element="$curr_element";
+            fi;
+            if [ "$numer" == "*" ]; then
+                res=$(expr "$tmp_element" % "$denom"); # modulo
+                if [ "$res" -eq 0 ]; then
+                    equals=0;
+                else
+                    return 1;
+                fi;
+            elif [ $(echo $numer | grep "-" | grep -v [,~/]) ]; then # la fréquence initiale est un intervalle
+                min=$(echo $numer | cut -d'-' -f1);
+                max=$(echo $numer | cut -d'-' -f2);
+                if [ "$min" -le "$curr_element" ] && [ "$max" -ge "$curr_element" ]; then
+                    res=$(expr "$tmp_element" % "$denom"); # modulo
+                    if [ "$res" -eq 0 ]; then
+                        equals=0;
+                    else
+                        return 1;
+                    fi;
+                fi;
+            fi;
+        else
+            return 1;
+        fi;
+    done;
+    return "$equals";
+}
+
+if grep -q "$current_user" /etc/tacheron.deny; then
+    echo "Erreur: l'utilisateur $current_user n'a pas la permission d'utiliser la commande tacheron!";
+else
+    while [ 1 ]; do
+    
+        while read line ; do
+            t_seconds=$(echo $line | awk '{split($0,a," "); print a[1]}');      # premier champ de la ligne correspondant aux secondes
+            t_minutes=$(echo $line | awk '{split($0,a," "); print a[2]}');      # second champ de la ligne correspondant aux minutes
+            t_hour=$(echo $line | awk '{split($0,a," "); print a[3]}');         # troisième champ de la ligne correspondant aux heures
+            t_day_of_month=$(echo $line | awk '{split($0,a," "); print a[4]}'); # quatrième champ de la ligne correspondant au jour du mois
+            t_month=$(echo $line | awk '{split($0,a," "); print a[5]}');        # cinquième champ de la ligne correspondant au mois
+            t_day_of_week=$(echo $line | awk '{split($0,a," "); print a[6]}');  # sixième champ de la ligne correspondant au jour de la semaine
+            cmd=$(echo $line | cut -d" " -f7-);
+
+            declare -a t_date=("$t_seconds" "$t_minutes" "$t_hour" "$t_day_of_month" "$t_month" "$t_day_of_week"); # On place les informations dans un tableau
+
+            check_syntax t_date[@] 
+            ret_syntax="$?";
+
+            if [ "$ret_syntax" -eq 0 ]; then # Si la syntaxe est correcte, on compare les dates
+
+                convert_seconds
+                curr_seconds="$?";                  # secondes actuelles converties en chiffre de 0 à 3
+                curr_minutes=$(date +'%M');         # minutes actuelles
+                curr_hour=$(date +'%H');            # heure actuelle
+                curr_day_of_month=$(date +'%d');    # jour du mois actuel
+                curr_month=$(date +'%m');           # mois actuel
+                curr_day_of_week=$(date +'%u');     # jour de la semaine actuel
+
+                declare -a curr_date=("$curr_seconds" "$curr_minutes" "$curr_hour" "$curr_day_of_month" "$curr_month" "$curr_day_of_week"); # On place les informations dans un tableau
+
+                compare_date t_date[@] curr_date[@]
+                ret_compare="$?";
+
+                if [ "$ret_compare" -eq 0 ]; then # Si les dates correspondent, on exécute la commande
+                    eval "$cmd";
+                    error="$?";
+                    exe_date=$(date);
+                    if [ "$error" -eq 0 ]; then  # On sauvegarde un compte rendu dans le fichier /var/log/tacheron.log
+                        echo "Exécution de la commande: $cmd, le $exe_date par la commande tacheron." >> /var/log/tacheron.log
+                    else 
+                        echo "Erreur: la commande $cmd n'a pas pu être exécutée comme prévu le $exe_date." >> /var/log/tacheron.log
+                    fi;
+                    sleep 1;
+                fi;
+            else
+                echo "Erreur: la syntaxe est invalide!"
+                exit
+            fi;
+        done < "$red_file";
+    done;
+fi;
