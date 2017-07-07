@@ -12,7 +12,7 @@ Exemple: 0 0 0 1,15 * * date, affichera la date dans le terminal chaque premier 
 - élaboration d'un script d'installation
 - élaboration d'un script de désinstallation
 - création d'une commande tacherontab permettant de planifier les tâches et dont la syntaxe est: **tacherontab -u username {-e,-l,-r}** 
-⋅⋅1. -e permettant l'édition ou la création du fichier de l'utilisateur donné
-⋅⋅2. -l permettant l'affichage du fichier de l'utilisateur donné
-⋅⋅3. -r permettant la suppression du fichier de l'utilisateur donné
+  1. -e permettant l'édition ou la création du fichier de l'utilisateur donné
+  2. -l permettant l'affichage du fichier de l'utilisateur donné
+  3. -r permettant la suppression du fichier de l'utilisateur donné
 - création d'une commande tacheron chargée d'exécuter les tâches planifiées à l'heure donnée.
