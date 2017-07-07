@@ -12,7 +12,7 @@ Exemple: __0 0 0 1,15 * * date__, affichera la date dans le terminal chaque prem
 Un champ temporel peut également contenir: 
 - une __liste__ de valeurs: (1,3,5) dans le champ mois par exemple
 - un __intervalle__: (1-5) dans le champ jour par exemple
-- Le caractère __*__ pour signifier toutes les valeurs possibles
+- Le caractère * pour signifier __toutes les valeurs possibles__
 - une __division__: \*/5 dans le champ minute, toutes les 5 minutes
 - un ou plusieurs \~nombre afin d'exprimer une __exception__: 5-8\~6\~7 ce qui correspond à 5,8
 
