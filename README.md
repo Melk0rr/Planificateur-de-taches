@@ -23,4 +23,4 @@ Un champ temporel peut également contenir:
   1. __-e__ permettant l'édition ou la création du fichier de l'utilisateur donné
   2. __-l__ permettant l'affichage du fichier de l'utilisateur donné
   3. __-r__ permettant la suppression du fichier de l'utilisateur donné
-- création d'une commande tacheron chargée d'exécuter les tâches planifiées à l'heure donnée.
+- création d'une commande **tacheron** chargée d'exécuter les tâches planifiées à l'heure donnée.
