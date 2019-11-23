@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GLOBIGNORE="*" # On évite les problèmes liés à l'interprétation du caractère *
-current_user=$(whoami);
+current_user=$(whoami); # Utilisateur actuel
 
 if [ "$current_user" == "root" ]; then
     red_file="/etc/tacherontab";
@@ -13,24 +13,29 @@ else
     fi;
 fi;
 
+# Permet de convertir les secondes selon le modèle de tranche (0: 0-14, 1: 15-29, 2:30-44, 3: 45-60)
 function convert_seconds {
     current_sec=$(date +'%S');
-    # 0-14: 0/ 15-29: 1/ 30-44: 2/ 45-59: 3
+    # 0-14
     if [ "$current_sec" -le 14 ]; then
         converted_sec=0
+    # 15-29
     elif [ "$current_sec" -le 29 ]; then
         converted_sec=1
+    # 30-44
     elif [ "$current_sec" -le 44 ]; then
         converted_sec=2
+    # 45-60
     else
         converted_sec=3
     fi;
     return "$converted_sec";
 }
 
+# Vérifie la syntaxe des arguments
 function check_syntax {
     checked=1; 
-    declare -a array=("${!1}")
+    declare -a array=("${!1}") # Place les arguments dans un tableau
     for i in {0..5}; do
         element="${array[$i]}"; # Element actuellement parcouru
 
@@ -41,6 +46,7 @@ function check_syntax {
         [ "$i" -eq 4 ] && max=12 # 12 mois
         [ "$i" -eq 5 ] && max=6  # 6 jours dans une semaine
 
+        # On vérifie que le champ correspond à l'une des syntaxes ci-dessous
         if [ $(echo $element | grep "^\*$") ]; then # Contient *
             checked=0;
         elif [ $(echo $element | grep "^[0-9]\{1,2\}$") ] && [ "$element" -le "$max" ]; then # Contient un chiffre/nombre simple
@@ -60,6 +66,7 @@ function check_syntax {
     return "$checked";
 }
 
+# Compare deux date et vérifie qu'elles sont égales
 function compare_date {
     declare -a t_array=("${!1}"); # On récupère le premier tableau
     declare -a c_array=("${!2}"); # On récupère le second tableau
@@ -129,6 +136,7 @@ function compare_date {
     return "$equals";
 }
 
+# On vérifie que l'utilisateur actuel a la permission d'utiliser la commande tacheron
 if grep -q "$current_user" /etc/tacheron.deny; then
     echo "Erreur: l'utilisateur $current_user n'a pas la permission d'utiliser la commande tacheron!";
 else
@@ -150,7 +158,7 @@ else
 
             if [ "$ret_syntax" -eq 0 ]; then # Si la syntaxe est correcte, on compare les dates
 
-                convert_seconds
+                convert_seconds                     # On excute la convertion de secondes et on passe le résultat à la variable curr_seconds
                 curr_seconds="$?";                  # secondes actuelles converties en chiffre de 0 à 3
                 curr_minutes=$(date +'%M');         # minutes actuelles
                 curr_hour=$(date +'%H');            # heure actuelle
