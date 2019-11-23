@@ -1,36 +1,49 @@
 #!/bin/bash
 
+# Vérification du nombre d'arguments
 if [ "$#" -le 3 ] && [ "$#" -ge 2 ]; then 
     first_param="$1";
     user="$2";
     current_user=$(whoami);
     path=$(cat /etc/tacheron.path);
 
+    # Vérificaiton du premier argument
     if [[ "$first_param" != "-u" && "$first_param" != "+u" ]]; then 
         echo "Erreur: Paramètre $first_param non valide!";
     else
+        # On vérifie que l'utilisateur existe
         if ! grep -c "$user" /etc/passwd ; then 
             echo "Erreur: L'utilisateur $user n'existe pas!";
         else
+            # On vérifie que l'utilisateur a la paermission d'utiliser la commande
             if grep -q "$current_user" /etc/tacheron.deny; then
                 echo "Erreur: L'utilisateur $user n'a pas la permission d'utiliser la commande tacherontab!";
             else
                 tacheron_members=$(grep tacheron /etc/group);
                 user_file="tacherontab$user";
-                if [ "$#" -eq 2 ]; then     
+                
+                # Si 2 arguments ont été donnés
+                if [ "$#" -eq 2 ]; then
+                    # Si le premier paramètre est "+u", on ajoute la commande pour l'utilisateur
                     if [ $first_param = '+u' ]; then
                         echo "Ajout de l'utilisateur $user à la liste des utilisateurs autorisés...";
+                        # Si on ne l'a pas ajouté auparavant, on l'ajoute
                         if ! grep -q "$user" /etc/tacheron.allow; then
                             echo -e "\n$user" >> /etc/tacheron.allow    
                         fi;
+                        
+                        # Puis on lui accorde les droits
                         usermod -a -G tacheron "$user"  
                         setfacl -m u:"$user":rwx /etc/tacheron      
                         setfacl -R -m u:"$user":rwx "$path"
                         setfacl -m u:"$user":rwx /var/log/tacheron.log
+                        
+                        # On référence la commande dans le PATH de l'utilisateur
                         if ! grep -q "$path" /home/"$user"/.bashrc ; then   
                             echo "Référencement de la commande pour l'utilisateur $user.";
                             echo -e "\nPATH=\$PATH:$path" >> /home/"$user"/.bashrc
                         fi;
+                    # Si le premier paramètre est "-u", on retire la commande à l'utilisateur
                     else
                         echo "Retrait de l'utilisateur $user de la liste des utilisateurs autorisés...";
                         sed -i "s/$user//" /etc/tacheron.allow     
@@ -39,16 +52,20 @@ if [ "$#" -le 3 ] && [ "$#" -ge 2 ]; then
                         setfacl -m u:"$user":--- /etc/tacheron      
                         setfacl -m u:"$user":--- /var/log/tacheron.log      
                     fi;
+                # Si 3 arguments ont été donnés
                 else
                     case "$3" in
+                    # -l: affichage du fichier tacherontab
                     "-l")
                         echo "Affichage du fichier tacherontab de l'utilisateur $user";
                         [ -f /etc/tacheron/"$user_file" ] && cat /etc/tacheron/"$user_file"; echo -e "\n" || echo "Fichier $user_file introuvable!";    
                         ;;
+                    # Suppression du fichier tacherontab
                     "-r")
                         echo "Suppression du fichier tacherontab de l'utilisateur $user";
                         [ -f /etc/tacheron/"$user_file" ] && rm /etc/tacheron/"$user_file" || echo "Fichier $user_file introuvable!"; 
                         ;;
+                    # Création ou édition du fichier tacherontab
                     "-e")
                         echo "Création du fichier tacherontab de l'utilisateur $user";
                         if [ ! -f /etc/tacheron/"$user_file" ]; then 
